@@ -1,0 +1,55 @@
+# Render Blueprint — deploys the backend API from this monorepo.
+# Apply with: render blueprint launch   (or via the Render dashboard "New +" → "Blueprint")
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  # Backend API: Next.js route handlers served as a long-running Node server.
+  - type: web
+    name: cognix-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: corepack enable && pnpm install && pnpm build
+    # Render injects $PORT; the start script binds Next.js to it.
+    startCommand: pnpm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # The frontend's deployed origin (update after the first Vercel deploy).
+      - key: NEXT_PUBLIC_ALLOWED_ORIGINS
+        sync: false
+      # This service's own public URL, e.g. https://cognix-backend.onrender.com
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      # Render Postgres / any managed Postgres connection string.
+      - key: POSTGRES_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      # LLM provider keys (add only the ones you use)
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_GENERATIVE_AI_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      # File storage (S3 or Vercel Blob)
+      - key: FILE_STORAGE_TYPE
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: BLOB_READ_WRITE_TOKEN
+        sync: false
