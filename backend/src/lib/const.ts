@@ -9,6 +9,13 @@ export const PROMPT_PASTE_MAX_LENGTH = 1000;
 export const IS_VERCEL_ENV = process.env.VERCEL === "1";
 export const IS_DOCKER_ENV = process.env.DOCKER_BUILD === "1";
 
+// Set DISABLE_AUTO_MIGRATE=true to skip the automatic Drizzle migration that
+// runs on boot (instrumentation.ts). Use it when you apply the schema yourself
+// via `pnpm db:migrate`, or when the DB is unreachable from the app host at
+// startup (e.g. an IPv6-only database behind an IPv4-only runtime).
+export const DISABLE_AUTO_MIGRATE =
+  process.env.DISABLE_AUTO_MIGRATE === "true";
+
 export const IS_MCP_SERVER_REMOTE_ONLY = IS_VERCEL_ENV;
 export const FILE_BASED_MCP_CONFIG =
   process.env.FILE_BASED_MCP_CONFIG === "true";
