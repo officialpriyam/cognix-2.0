@@ -51,6 +51,9 @@ next-env.d.ts
 # memory-bank
 /memory-bank
 
+# supabase
+supabase/.temp/
+
 local-data
 
 .cursorrules

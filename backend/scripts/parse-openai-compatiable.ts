@@ -22,6 +22,9 @@ async function load() {
 /**
  * Reads a .env file, modifies a specific key's value, and writes it back.
  *
+ * Preserves comments and blank lines (and their order) so the .env file
+ * stays human-editable; only the given key's line is replaced (or appended).
+ *
  * @param {string} envFilePath - The absolute path to the .env file.
  * @param {string} keyToModify - The key of the variable to add or edit (e.g., 'DATA').
  * @param {string} newValue - The new value for the variable.
@@ -38,35 +41,27 @@ function updateEnvVariable(
       envContent = fs.readFileSync(envFilePath, "utf8");
     }
 
-    const envVars: { [key: string]: string } = {};
-    const lines = envContent.split("\n");
+    const updatedLine = `${keyToModify}=${newValue}`;
+    const lines = envContent.split(/\r?\n/);
+    let replaced = false;
 
-    lines.forEach((line) => {
-      const trimmedLine = line.trim();
-      if (trimmedLine.startsWith("#") || trimmedLine === "") {
-        return;
+    const newLines = lines.map((line) => {
+      const trimmed = line.trim();
+      if (!replaced && trimmed.length > 0 && !trimmed.startsWith("#")) {
+        const eq = trimmed.indexOf("=");
+        if (eq > 0 && trimmed.slice(0, eq).trim() === keyToModify) {
+          replaced = true;
+          return updatedLine;
+        }
       }
-
-      const parts = trimmedLine.split("=");
-      if (parts.length >= 2) {
-        const key = parts[0];
-        const value = parts.slice(1).join("=");
-        envVars[key] = value;
-      }
+      return line;
     });
 
-    envVars[keyToModify] = newValue;
-
-    let newEnvContent = "";
-    for (const key in envVars) {
-      if (Object.prototype.hasOwnProperty.call(envVars, key)) {
-        newEnvContent += `${key}=${envVars[key]}\n`;
-      }
+    if (!replaced) {
+      newLines.push(updatedLine);
     }
 
-    newEnvContent = newEnvContent.trim();
-
-    fs.writeFileSync(envFilePath, newEnvContent, "utf8");
+    fs.writeFileSync(envFilePath, newLines.join("\n"), "utf8");
     console.log(
       `Successfully updated ${keyToModify} in ${envFilePath} to: \n\n${newValue}\n`,
     );

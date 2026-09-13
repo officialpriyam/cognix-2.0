@@ -1,20 +1,19 @@
 import { defineConfig } from "drizzle-kit";
-import "load-env";
+import { getDbConfig, validateDbConfig } from "./src/lib/db/config";
 
-const dialect = "postgresql";
-
-const url = process.env.POSTGRES_URL!;
+// Load and validate database configuration
+const dbConfig = getDbConfig();
+validateDbConfig(dbConfig);
 
 const schema = "./src/lib/db/pg/schema.pg.ts";
-
 const out = "./src/lib/db/migrations/pg";
 
 export default defineConfig({
   schema,
   out,
-  dialect,
+  dialect: "postgresql",
   migrations: {},
   dbCredentials: {
-    url,
+    url: dbConfig.url,
   },
 });
