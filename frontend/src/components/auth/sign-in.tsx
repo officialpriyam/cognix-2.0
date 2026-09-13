@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,10 +38,31 @@ export default function SignIn({
 }) {
   const t = useTranslations("Auth.SignIn");
   const { backendHealth } = useBackendConnectivity();
-  if (backendHealth.kind !== "ok") {
+  const mountedRef = useRef(false);
+  const [showMaintenance, setShowMaintenance] = useState(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mountedRef.current) return;
+    setShowMaintenance(backendHealth.kind !== "ok");
+  }, [backendHealth.kind]);
+
+  if (!mountedRef.current || !showMaintenance) {
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+    return null;
+  }
+
+  if (showMaintenance) {
+    const health = backendHealth as Exclude<typeof backendHealth, { kind: "ok" }>;
     return (
       <div className="flex min-h-[280px] items-center justify-center text-destructive">
-        <span className="text-sm">{backendHealth.message}</span>
+        <span className="text-sm">{health.message}</span>
       </div>
     );
   }

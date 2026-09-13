@@ -1,36 +1,56 @@
 "use client";
 
-import { useEffect } from "react";import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "ui/button";
 import { appStore } from "@/app/store";
+import { useBackendConnectivity } from "@/hooks/useBackendConnectivity";
+
 export function BackendStatusBanner() {
   const t = useTranslations("Info");
-  const backendHealth = appStore((s) => s.backendHealth);
+  const { ping } = useBackendConnectivity();
+  const mountedRef = useRef(false);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (backendHealth.kind !== "ok") {
-      window.scrollTo({ top: 0, behavior: "instant" });
-    }
-  }, [backendHealth.kind]);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-  if (backendHealth.kind === "ok") {
+  useEffect(() => {
+    if (!mountedRef.current) return;
+    if (appStore.getState().backendHealth.kind !== "ok") {
+      setVisible(true);
+      window.scrollTo({ top: 0, behavior: "instant" });
+    } else {
+      setVisible(false);
+    }
+  }, [appStore.getState().backendHealth.kind]);
+
+  if (!visible) {
     return null;
   }
 
+  const health = appStore.getState().backendHealth;
   const message =
-    backendHealth.kind === "timeout"
+    health.kind === "timeout"
       ? t("backendTimeoutMessage")
-      : backendHealth.kind === "unreachable"
+      : health.kind === "unreachable"
         ? t("backendUnreachableMessage")
-        : backendHealth.kind === "notFound"
+        : health.kind === "notFound"
           ? t("backendNotFoundMessage")
           : t("backendError");
   const title =
-    backendHealth.kind === "timeout" ? t("backendTimeoutTitle") :
-    backendHealth.kind === "unreachable" ? t("backendUnreachableTitle") :
-    backendHealth.kind === "notFound" ? t("backendNotFoundTitle") :
-    t("backendErrorTitle");
+    health.kind === "timeout"
+      ? t("backendTimeoutTitle")
+      : health.kind === "unreachable"
+        ? t("backendUnreachableTitle")
+        : health.kind === "notFound"
+          ? t("backendNotFoundTitle")
+          : t("backendErrorTitle");
 
   return (
     <div
@@ -69,8 +89,16 @@ export function BackendStatusBanner() {
           <Button
             variant="secondary"
             size="sm"
+            onClick={ping}
+          >
+            Retry
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               appStore.setState({ backendHealth: { kind: "ok" } });
+              setVisible(false);
             }}
           >
             Dismiss
