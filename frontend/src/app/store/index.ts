@@ -69,11 +69,47 @@ export interface AppState {
   pendingThreadMention?: ChatMention;
 }
 
+// Backend connectivity (live app-wide health)
+export interface AppBackendHealth {
+  kind: "ok";
+}
+export interface AppBackendUnreachable {
+  kind: "unreachable";
+  message: string;
+}
+export interface AppBackendTimeout {
+  kind: "timeout";
+  message: string;
+}
+export interface AppBackendServerError {
+  kind: "serverError";
+  status: number;
+  message: string;
+}
+export interface AppBackendNotFound {
+  kind: "notFound";
+  message: string;
+}
+
+export type AppBackendHealthState =
+  | AppBackendHealth
+  | AppBackendUnreachable
+  | AppBackendTimeout
+  | AppBackendServerError
+  | AppBackendNotFound;
+
+export interface AppState {
+  backendHealth: AppBackendHealthState;
+}
+
 export interface AppDispatch {
   mutate: (state: Mutate<AppState>) => void;
 }
 
+type AppStateWithBackend = AppState & AppDispatch;
+
 const initialState: AppState = {
+  backendHealth: { kind: "ok" },
   threadList: [],
   archiveList: [],
   generatingTitleThreadIds: [],
@@ -113,10 +149,11 @@ const initialState: AppState = {
   pendingThreadMention: undefined,
 };
 
-export const appStore = create<AppState & AppDispatch>()(
+export const appStore = create<AppStateWithBackend & AppDispatch>()(
   persist(
     (set) => ({
       ...initialState,
+      backendHealth: { kind: "ok" },
       mutate: set,
     }),
     {

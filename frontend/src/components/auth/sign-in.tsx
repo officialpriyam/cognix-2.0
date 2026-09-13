@@ -21,6 +21,9 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { SocialAuthenticationProvider } from "app-types/authentication";
 import SocialProviders from "./social-providers";
+import { appStore } from "@/app/store";
+import { classifyBackendError } from "@/lib/connectivity";
+import { useBackendConnectivity } from "@/hooks/useBackendConnectivity";
 
 export default function SignIn({
   emailAndPasswordEnabled,
@@ -34,6 +37,14 @@ export default function SignIn({
   isFirstUser: boolean;
 }) {
   const t = useTranslations("Auth.SignIn");
+  const { backendHealth } = useBackendConnectivity();
+  if (backendHealth.kind !== "ok") {
+    return (
+      <div className="flex min-h-[280px] items-center justify-center text-destructive">
+        <span className="text-sm">{backendHealth.message}</span>
+      </div>
+    );
+  }
 
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +64,16 @@ export default function SignIn({
         },
         {
           onError(ctx) {
-            toast.error(ctx.error.message || ctx.error.statusText);
+            const error = ctx.error ?? {};
+            const health = classifyBackendError(error);
+            if (health.kind !== "ok") {
+              appStore.setState({ backendHealth: health });
+            }
+            toast.error(
+              (error as { message?: string }).message ??
+              (error as { statusText?: string }).statusText ??
+              "Sign-in failed. Please try again.",
+            );
           },
         },
       ),
@@ -64,7 +84,15 @@ export default function SignIn({
 
   const handleSocialSignIn = (provider: SocialAuthenticationProvider) => {
     authClient.signIn.social({ provider }).catch((e) => {
-      toast.error(e.error);
+      const health = classifyBackendError(e);
+      if (health.kind !== "ok") {
+        appStore.setState({ backendHealth: health });
+      }
+      toast.error(
+        (e as { error?: string }).error ??
+          (e as { message?: string }).message ??
+          "Social sign-in failed. Please try again.",
+      );
     });
   };
   return (

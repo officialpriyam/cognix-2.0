@@ -47,7 +47,15 @@
   "Error": {},
   "Info": {
     "mcpAddingDisabled": "MCP server addition has been disabled by the administrator.",
-    "vercelSyncDelay": "Running on Vercel\n\nMCP changes may take 10-15 seconds to sync. Please wait a moment after adding, editing, or deleting servers if changes don't appear immediately."
+    "vercelSyncDelay": "Running on Vercel\n\nMCP changes may take 10-15 seconds to sync. Please wait a moment after adding, editing, or deleting servers if changes don't appear immediately.",
+    "backendTimeoutTitle": "Backend is slow",
+    "backendTimeoutMessage": "The backend is taking too long to respond. Please try again in a moment.",
+    "backendUnreachableTitle": "We're under maintenance",
+    "backendUnreachableMessage": "We couldn't connect to the backend. This usually means the service is temporarily down — please try again shortly.",
+    "backendNotFoundTitle": "Backend misconfigured",
+    "backendNotFoundMessage": "The authentication service couldn't be found. This usually means the backend URL is misconfigured.",
+    "backendErrorTitle": "Backend error",
+    "backendError": "The backend encountered an error."
   },
   "Workflow": {
     "title": "Workflow",

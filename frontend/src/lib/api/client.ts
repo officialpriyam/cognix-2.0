@@ -2,13 +2,29 @@
  * Secure API Client for Frontend
  * Handles all communication with the backend with proper error handling and security
  */
-
 export type ApiResponse<T> = {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
 };
+
+/**
+ * Classify a thrown error as a backend health problem.
+ * Used by hooks to surface "under maintenance" when the backend is unreachable.
+ */
+export function classifyApiError(err: unknown): { kind: "ok" } | {
+  kind: "unreachable" | "timeout";
+  message: string;
+} {
+  if (err instanceof DOMException && err.name === "AbortError") {
+    return { kind: "timeout", message: "The backend is not responding." };
+  }
+  if (err instanceof TypeError || (typeof err === "object" && err !== null && "message" in err && /failed|abort|network/i.test(String((err as Record<string, unknown>).message || "")))) {
+    return { kind: "unreachable", message: "We couldn't connect to the backend." };
+  }
+  return { kind: "ok" };
+}
 
 export type ApiOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";

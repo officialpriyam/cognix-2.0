@@ -10,6 +10,8 @@ import {
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { Toaster } from "ui/sonner";
+import { BackendStatusBanner } from "@/components/layouts/backend-status-banner";
+import { BackendConnectivityInit } from "@/components/layouts/backend-connectivity-init";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -54,9 +56,10 @@ export default async function RootLayout({
           storageKey="app-theme-v2"
           disableTransitionOnChange
         >
-          <ThemeStyleProvider>
-            <NextIntlClientProvider>
+          <ThemeStyleProvider>              <NextIntlClientProvider>
               <div id="root">
+                <BackendConnectivityInit />
+                <BackendStatusBanner />
                 {children}
                 <Toaster richColors />
               </div>

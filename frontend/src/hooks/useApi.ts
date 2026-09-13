@@ -7,6 +7,8 @@
 
 import { useCallback, useState } from "react";
 import { apiClient, type ApiResponse } from "@/lib/api/client";
+import { appStore } from "@/app/store";
+import { classifyBackendError } from "@/lib/connectivity";
 
 interface UseApiOptions {
   onSuccess?: (data: unknown) => void;
@@ -25,14 +27,27 @@ export function useApiGet<T>(url: string, options: UseApiOptions = {}) {
     setLoading(true);
     setError(null);
 
-    const response = await apiClient.get<T>(url);
+    try {
+      const response = await apiClient.get<T>(url);
 
-    if (response.success && response.data) {
-      setData(response.data);
-      options.onSuccess?.(response.data);
-    } else {
-      setError(response.error || "Failed to fetch data");
-      options.onError?.(response.error || "Failed to fetch data");
+      if (response.success && response.data) {
+        setData(response.data);
+        options.onSuccess?.(response.data);
+      } else {
+        setError(response.error || "Failed to fetch data");
+        options.onError?.(response.error || "Failed to fetch data");
+      }
+    } catch (err) {
+      const health = classifyBackendError(err);
+      if (health.kind !== "ok") {
+        appStore.setState({ backendHealth: health });
+      }
+      setError(
+        health.kind === "unreachable" || health.kind === "timeout"
+          ? "We're under maintenance. Please try again in a moment."
+          : (err instanceof Error ? err.message : "Failed to fetch data"),
+      );
+      options.onError?.(err instanceof Error ? err.message : "Failed to fetch data");
     }
 
     setLoading(false);
@@ -57,18 +72,33 @@ export function useApiPost<T, P = unknown>(
       setLoading(true);
       setError(null);
 
-      const response = await apiClient.post<T>(url, body);
+      try {
+        const response = await apiClient.post<T>(url, body);
 
-      if (response.success && response.data) {
-        setData(response.data);
-        options.onSuccess?.(response.data);
-      } else {
-        setError(response.error || "Failed to submit data");
-        options.onError?.(response.error || "Failed to submit data");
+        if (response.success && response.data) {
+          setData(response.data);
+          options.onSuccess?.(response.data);
+        } else {
+          setError(response.error || "Failed to submit data");
+          options.onError?.(response.error || "Failed to submit data");
+        }
+
+        setLoading(false);
+        return response;
+      } catch (err) {
+        const health = classifyBackendError(err);
+        if (health.kind !== "ok") {
+          appStore.setState({ backendHealth: health });
+        }
+        setError(
+          health.kind === "unreachable" || health.kind === "timeout"
+            ? "We're under maintenance. Please try again in a moment."
+            : (err instanceof Error ? err.message : "Failed to submit data"),
+        );
+        options.onError?.(err instanceof Error ? err.message : "Failed to submit data");
+        setLoading(false);
+        return { success: false, error: err instanceof Error ? err.message : "Failed to submit data" };
       }
-
-      setLoading(false);
-      return response;
     },
     [url, options]
   );
@@ -92,21 +122,36 @@ export function useApiUpdate<T, P = unknown>(
       setLoading(true);
       setError(null);
 
-      const response = await apiClient.request<T>(url, {
-        method,
-        body,
-      });
+      try {
+        const response = await apiClient.request<T>(url, {
+          method,
+          body,
+        });
 
-      if (response.success && response.data) {
-        setData(response.data);
-        options.onSuccess?.(response.data);
-      } else {
-        setError(response.error || "Failed to update data");
-        options.onError?.(response.error || "Failed to update data");
+        if (response.success && response.data) {
+          setData(response.data);
+          options.onSuccess?.(response.data);
+        } else {
+          setError(response.error || "Failed to update data");
+          options.onError?.(response.error || "Failed to update data");
+        }
+
+        setLoading(false);
+        return response;
+      } catch (err) {
+        const health = classifyBackendError(err);
+        if (health.kind !== "ok") {
+          appStore.setState({ backendHealth: health });
+        }
+        setError(
+          health.kind === "unreachable" || health.kind === "timeout"
+            ? "We're under maintenance. Please try again in a moment."
+            : (err instanceof Error ? err.message : "Failed to update data"),
+        );
+        options.onError?.(err instanceof Error ? err.message : "Failed to update data");
+        setLoading(false);
+        return { success: false, error: err instanceof Error ? err.message : "Failed to update data" };
       }
-
-      setLoading(false);
-      return response;
     },
     [url, options]
   );
@@ -125,17 +170,32 @@ export function useApiDelete<T>(url: string, options: UseApiOptions = {}) {
     setLoading(true);
     setError(null);
 
-    const response = await apiClient.delete<T>(url);
+    try {
+      const response = await apiClient.delete<T>(url);
 
-    if (!response.success) {
-      setError(response.error || "Failed to delete");
-      options.onError?.(response.error || "Failed to delete");
-    } else {
-      options.onSuccess?.(null);
+      if (!response.success) {
+        setError(response.error || "Failed to delete");
+        options.onError?.(response.error || "Failed to delete");
+      } else {
+        options.onSuccess?.(null);
+      }
+
+      setLoading(false);
+      return response;
+    } catch (err) {
+      const health = classifyBackendError(err);
+      if (health.kind !== "ok") {
+        appStore.setState({ backendHealth: health });
+      }
+      setError(
+        health.kind === "unreachable" || health.kind === "timeout"
+          ? "We're under maintenance. Please try again in a moment."
+          : (err instanceof Error ? err.message : "Failed to delete"),
+      );
+      options.onError?.(err instanceof Error ? err.message : "Failed to delete");
+      setLoading(false);
+      return { success: false, error: err instanceof Error ? err.message : "Failed to delete" };
     }
-
-    setLoading(false);
-    return response;
   }, [url, options]);
 
   return { loading, error, delete: delete_item };
@@ -162,19 +222,34 @@ export function useApiUpload<T>(url: string, options: UseApiOptions = {}) {
         return fd;
       })() : file;
 
-      const response = await apiClient.uploadFile<T>(url, formData);
+      try {
+        const response = await apiClient.uploadFile<T>(url, formData);
 
-      if (response.success && response.data) {
-        setData(response.data);
-        setProgress(100);
-        options.onSuccess?.(response.data);
-      } else {
-        setError(response.error || "Upload failed");
-        options.onError?.(response.error || "Upload failed");
+        if (response.success && response.data) {
+          setData(response.data);
+          setProgress(100);
+          options.onSuccess?.(response.data);
+        } else {
+          setError(response.error || "Upload failed");
+          options.onError?.(response.error || "Upload failed");
+        }
+
+        setLoading(false);
+        return response;
+      } catch (err) {
+        const health = classifyBackendError(err);
+        if (health.kind !== "ok") {
+          appStore.setState({ backendHealth: health });
+        }
+        setError(
+          health.kind === "unreachable" || health.kind === "timeout"
+            ? "We're under maintenance. Please try again in a moment."
+            : (err instanceof Error ? err.message : "Upload failed"),
+        );
+        options.onError?.(err instanceof Error ? err.message : "Upload failed");
+        setLoading(false);
+        return { success: false, error: err instanceof Error ? err.message : "Upload failed" };
       }
-
-      setLoading(false);
-      return response;
     },
     [url, options]
   );
