@@ -8,14 +8,14 @@ services:
     runtime: node
     plan: free
     rootDir: backend
-    buildCommand: corepack enable && pnpm install && pnpm build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
     # Render injects $PORT; the start script binds Next.js to it.
     startCommand: pnpm start
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
-        value: "20"
+        value: "24"
       # The frontend's deployed origin (update after the first Vercel deploy).
       - key: NEXT_PUBLIC_ALLOWED_ORIGINS
         sync: false
