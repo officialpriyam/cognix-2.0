@@ -130,3 +130,86 @@ Root causes & fixes:
 
 The `[baseline-browser-mapping]` messages in the logs are harmless warnings, not errors. Once the
 `NODE_ENV` variable is removed, the `⚠ non-standard NODE_ENV` warning disappears too.
+
+---
+
+## 5. Troubleshooting: deploy fails with "PostgreSQL migrations failed" / ENETUNREACH
+
+### Symptom
+
+The deploy log shows:
+
+```
+❌ PostgreSQL migrations failed. check the postgres instance is running.
+Error: connect ENETUNREACH 2406:da1a:…:5432 - Local (:::0)
+Error: Failed query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+ELIFECYCLE  Command failed with exit code 1.
+==> No open ports detected, continuing to scan...
+```
+
+and every URL on the service (including `/api/auth/error`) shows an error page.
+
+### Root cause
+
+`ENETUNREACH` on an address made only of hex groups separated by `:` (e.g.
+`2406:da1a:…`) means the app tried to reach Postgres over **IPv6** and the runtime
+has **no IPv6 route** — Render's runtime network is IPv4-only.
+
+This happens when `POSTGRES_URL` uses Supabase's **direct connection** host
+(`db.<project-ref>.supabase.co:5432`), which only publishes an IPv6 (AAAA) DNS
+record. On boot, `instrumentation.ts` runs migrations, the connection fails, the
+process exits before binding a port, and Render reports "No open ports detected".
+The failing page (`/api/auth/error`, `/_global-error`, …) is just whichever route
+Render probes first — it is not the broken component.
+
+### Fix
+
+Use Supabase's **Session pooler** URI (the shared pooler is IPv4-reachable on
+every plan). Render Dashboard → `cognix-backend` → **Environment** → edit
+`POSTGRES_URL`:
+
+```
+postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+Two easy-to-miss details:
+
+1. The **username** for pooler URLs is `postgres.<project-ref>` (a dot, not a
+   direct connection's plain `postgres`).
+2. The **host** is `aws-0-<region>.pooler.supabase.com`, not `db.<ref>.supabase.co`.
+
+Copy it from Supabase Dashboard → **Connect** → *Session pooler*, replacing
+`[YOUR-PASSWORD]` (percent-encode reserved characters like `&` or `#`).
+
+**Save** the env var and Redeploy. Verify via the deploy log
+(`✅ PostgreSQL migrations completed in … ms`) and
+`https://<your-backend>.onrender.com/api/health`.
+
+#### Skipping boot-time migrations
+
+The backend runs Drizzle migrations automatically on boot (via
+`instrumentation.ts`); if they fail, the process exits and the deploy dies with
+"No open ports detected". If you have already applied the schema another way
+(e.g. `pnpm db:migrate` locally, or Supabase CLI), you can opt out:
+
+- Render Dashboard → `cognix-backend` → **Environment** → add
+  **`DISABLE_AUTO_MIGRATE` = `true`** → **Save** (auto-redeploys).
+
+With the flag set, the boot log shows
+`⏭️ DISABLE_AUTO_MIGRATE=true — skipping boot-time database migrations.`
+and the server starts without touching the database. Remember: schema changes
+then need a manual `pnpm db:migrate` (or CI step) before the new code deploys,
+and the flag does **not** remove the need for a working `POSTGRES_URL` — the
+app still queries the database at runtime.
+
+### Other migration-startup errors and their meanings
+
+| Error code | Meaning | Fix |
+|---|---|---|
+| `ENETUNREACH` (IPv6 address) | No IPv6 route from the runtime | Use the Supabase session-pooler URI (above) |
+| `ECONNREFUSED` | Host reachable, nothing on that port | Check the DB is running and the port in `POSTGRES_URL` |
+| `ETIMEDOUT` | Firewalled | Allow inbound connections from the runtime (Supabase → Database → Network) |
+| `ENOTFOUND` | DNS failure | Fix the hostname in `POSTGRES_URL` |
+
+The backend now prints these hints automatically next to
+`❌ PostgreSQL migrations failed.` in the startup log.

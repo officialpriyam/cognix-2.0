@@ -34,6 +34,11 @@ services:
       # Use the Session pooler URI and append ?sslmode=require (Supabase requires TLS).
       - key: POSTGRES_URL
         sync: false
+      # Set to "true" to skip boot-time Drizzle migrations (instrumentation.ts) —
+      # e.g. when you apply the schema yourself via `pnpm db:migrate`. Boot-time
+      # migration failure aborts startup otherwise.
+      - key: DISABLE_AUTO_MIGRATE
+        sync: false
       # Upstash Redis URL (Console -> your database -> Connect -> ioredis).
       # Must use the rediss:// TLS scheme, e.g. rediss://default:<password>@<db>.upstash.io:6379
       - key: REDIS_URL
