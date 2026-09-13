@@ -16,6 +16,10 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "24"
+      # ⚠ Do NOT add NODE_ENV to this service (dashboard included).
+      # Render injects NODE_ENV=production for web services; an ambient
+      # NODE_ENV=development during `next build` bundles the development React
+      # build and crashes static prerendering ("useContext" of null).
       # The frontend's deployed origin (update after the first Vercel deploy).
       - key: NEXT_PUBLIC_ALLOWED_ORIGINS
         sync: false

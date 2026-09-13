@@ -102,22 +102,31 @@ Now that the frontend exists, update the backend's CORS allow-list:
 
 ## 4. What was fixed for this deploy (build failure)
 
-The first deploy failed during `next build` with
+The first deploys failed during `next build` with
 `Error occurred prerendering page "/_global-error" … Cannot read properties of null (reading 'useContext')`.
 
 Root causes & fixes:
 
-1. **Unbounded Node range** — `"engines": { "node": ">=20.x" }` in `backend/package.json` made Render
+1. **`NODE_ENV` set in the Render environment (the actual culprit) —** `backend/.env.example` shipped
+   a `NODE_ENV=development` template line, so a `NODE_ENV` variable ended up in the Render service's
+   environment. During `next build`, Next.js honors an ambient `NODE_ENV` and bundles the
+   **development** React build; React 19 dev-mode SSR then crashes Next 16's static prerenderer with
+   exactly this `useContext` null error (reproduced locally with one command: `NODE_ENV=development pnpm build`).
+   The page that dies (`/_global-error`, `/api/auth/error`, …) is just whichever route a worker hits first.
+   **Fix:** delete the `NODE_ENV` env var from the Render service (dashboard → Environment).
+   Render already injects `NODE_ENV=production` for web services. The line was also removed from
+   `backend/.env.example` so it can't be copied into a dashboard again.
+2. **Unbounded Node range** — `"engines": { "node": ">=20.x" }` in `backend/package.json` made Render
    install the *brand-new* **Node 26.8.2** (Render docs: an unbounded range always resolves to the latest
-   release). The app builds fine on Node 24 but trips a known Next.js 16 prerender bug on Node 26
-   (see vercel/next.js#95741, #86178, #84994).
-   **Fix:** pinned to `"node": "24.x"` (matches Render's current default 24.14.1) and `NODE_VERSION: "24"` in `render.yaml`.
-2. **47 parallel prerender workers** — Render's many-core CI machines spawn 40+ static-generation
-   workers, which makes the scheduling-sensitive `/_global-error` crash far more likely.
+   release). A pinned, supported Node avoids unrelated risk.
+   **Fix:** pinned to `"node": "24.x"` and `NODE_VERSION: "24"` in `render.yaml`.
+3. **47 parallel prerender workers** — Render's many-core CI machines spawn 40+ static-generation
+   workers, which amplifies prerender-time failures and risks free-plan memory limits.
    **Fix:** `experimental.cpus: 1` in `backend/next.config.ts` serializes prerendering (negligible build-time cost for an API app).
-3. **Multiple lockfiles warning** — Next.js guessed the wrong workspace root because
+4. **Multiple lockfiles warning** — Next.js guessed the wrong workspace root because
    `pnpm-lock.yaml` exists at the repo root, in `frontend/`, and in `backend/`.
    **Fix:** `turbopack.root` pinned to the backend directory in `backend/next.config.ts`.
-4. **Non-reproducible installs** — build command now uses `pnpm install --frozen-lockfile` in `render.yaml`.
+5. **Non-reproducible installs** — build command now uses `pnpm install --frozen-lockfile` in `render.yaml`.
 
-The `⚠ non-standard NODE_ENV` and `[baseline-browser-mapping]` messages in the logs are harmless warnings, not errors.
+The `[baseline-browser-mapping]` messages in the logs are harmless warnings, not errors. Once the
+`NODE_ENV` variable is removed, the `⚠ non-standard NODE_ENV` warning disappears too.
