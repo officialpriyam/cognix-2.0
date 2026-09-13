@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . && echo '🛑 Skipping: no frontend changes' || exit 1"
+  "ignoreCommand": "if git diff --quiet HEAD^ HEAD -- .; then echo '🛑 Skipping: no frontend changes'; exit 0; else echo '✅ Frontend changes detected — building'; exit 1; fi"
 }
