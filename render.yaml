@@ -20,16 +20,22 @@ services:
       # Render injects NODE_ENV=production for web services; an ambient
       # NODE_ENV=development during `next build` bundles the development React
       # build and crashes static prerendering ("useContext" of null).
-      # The frontend's deployed origin (update after the first Vercel deploy).
+      # Frontend origin(s) that the backend will accept requests from.
       - key: NEXT_PUBLIC_ALLOWED_ORIGINS
+        value: https://cognix.iampriyam.me
         sync: false
       # This service's own public URL, e.g. https://cognix-backend.onrender.com
       - key: NEXT_PUBLIC_API_URL
         sync: false
+      # The backend's own public URL — used by better-auth to build trustedOrigins.
+      # Must match how the frontend reaches the backend (scheme + hostname).
       - key: BETTER_AUTH_URL
+        value: https://api.cognix.iampriyam.me
         sync: false
+      # Must match the frontend's BETTER_AUTH_SECRET so cookies/signatures align.
       - key: BETTER_AUTH_SECRET
-        generateValue: true
+        value: mAtxoUfP3+croq0vBbd05mt8VjrkVVcde1qL9nFe5WI=
+        sync: false
       # Supabase Postgres connection string (Project Settings -> Database -> Connection string -> URI).
       # Use the Session pooler URI and append ?sslmode=require (Supabase requires TLS).
       - key: POSTGRES_URL
