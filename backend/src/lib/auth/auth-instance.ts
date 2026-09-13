@@ -39,7 +39,14 @@ const options = {
     }),
     nextCookies(),
   ],
-  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_BASE_URL,
+  baseURL: {
+    origin: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_BASE_URL,
+    allowedHosts: [
+      "cognix.iampriyam.me",
+      "localhost",
+      "127.0.0.1",
+    ],
+  },
   user: {
     changeEmail: {
       enabled: true,
