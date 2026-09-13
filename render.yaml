@@ -26,9 +26,12 @@ services:
         sync: false
       - key: BETTER_AUTH_SECRET
         generateValue: true
-      # Render Postgres / any managed Postgres connection string.
+      # Supabase Postgres connection string (Project Settings -> Database -> Connection string -> URI).
+      # Use the Session pooler URI and append ?sslmode=require (Supabase requires TLS).
       - key: POSTGRES_URL
         sync: false
+      # Upstash Redis URL (Console -> your database -> Connect -> ioredis).
+      # Must use the rediss:// TLS scheme, e.g. rediss://default:<password>@<db>.upstash.io:6379
       - key: REDIS_URL
         sync: false
       # LLM provider keys (add only the ones you use)
@@ -43,6 +46,9 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: OPENROUTER_API_KEY
+        sync: false
+      # Exa AI - built-in web search tool (@web)
+      - key: EXA_API_KEY
         sync: false
       # File storage (S3 or Vercel Blob)
       - key: FILE_STORAGE_TYPE
