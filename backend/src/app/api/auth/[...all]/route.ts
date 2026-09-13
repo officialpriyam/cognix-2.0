@@ -1,16 +1,8 @@
-import { auth } from "auth/server";
 import { NextRequest, NextResponse } from "next/server";
-import { corsForAuth, addAuthCorsHeaders } from "@/lib/cors";
 
-export default async function handler(request: NextRequest): Promise<NextResponse> {
-  // CORS preflight first
-  if (request.method === "OPTIONS") {
-    throw new Error("OPTIONS_HANDLER_HIT");
-  }
-
-  // Delegate GET/POST (and any other method) to better-auth
-  const authResponse = await auth.handler(request);
-  return addAuthCorsHeaders(authResponse as NextResponse, request);
+export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+  const res = NextResponse.json({ hit: "OPTIONS_named" }, { status: 200 });
+  res.headers.set("x-cors-debug", "OPTIONS_named_export");
+  res.headers.set("access-control-allow-origin", "*");
+  return res;
 }
-
-export const runtime = "nodejs";
